@@ -1,0 +1,54 @@
+{
+  "model": "GraphSAGE_edge_classifier",
+  "best_epoch": 8,
+  "seed": 42,
+  "hidden": 32,
+  "history_days": 2,
+  "threshold": 0.7208219170570374,
+  "train_end": "2022-09-08",
+  "validation_end": "2022-09-09",
+  "data_start": "2022-09-01 00:00:00",
+  "data_end": "2022-09-10 23:59:00",
+  "train_rows": 3731672,
+  "train_positives": 3027,
+  "validation": {
+    "average_precision": 0.024758040614258115,
+    "precision": 0.05351437699680511,
+    "recall": 0.12430426716141002,
+    "f1": 0.07481853713009493,
+    "confusion_matrix_tn_fp_fn_tp": [
+      481049,
+      1185,
+      472,
+      67
+    ],
+    "positive_rate": 0.0011164667084813118,
+    "rows": 482773
+  },
+  "test": {
+    "average_precision": 0.013041380603907065,
+    "precision": 0.028724894908921064,
+    "recall": 0.12866108786610878,
+    "f1": 0.046964490263459335,
+    "confusion_matrix_tn_fp_fn_tp": [
+      857677,
+      4159,
+      833,
+      123
+    ],
+    "positive_rate": 0.001108030672185123,
+    "rows": 862792
+  },
+  "elapsed_seconds": 18.56435610000335,
+  "device": "cuda",
+  "negatives_per_day_cap": 50000,
+  "training_objective": "equal_class_weight_and_equal_day_weight",
+  "versions": {
+    "torch": "2.10.0+cu128",
+    "torch_geometric": "2.8.1",
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.8.0"
+  },
+  "input_sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040"
+}

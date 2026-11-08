@@ -1,0 +1,6 @@
+{
+  "as_of": "2022-09-09 00:00:00",
+  "valid_before": "2022-09-10 00:00:00",
+  "history_days": 2,
+  "note": "Snapshot fijo al inicio del primer d\u00eda de test; no actualiza historial durante el d\u00eda."
+}
