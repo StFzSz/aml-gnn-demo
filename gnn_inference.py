@@ -1,5 +1,6 @@
 """Inferencia CPU de GNN con un snapshot fijo, sin recalcular el grafo."""
 import json
+import hashlib
 import time
 from pathlib import Path
 import joblib
@@ -13,10 +14,55 @@ REQUIRED_ASSETS = ['gnn.pt', 'metrics.json', 'edge_transform.joblib', 'context.n
                    'account_index.joblib', 'context.json']
 
 
+class CompactAccountIndex:
+    def __init__(self, folder, parts):
+        self.keys = np.concatenate([np.load(folder/p['keys'], allow_pickle=False) for p in parts])
+        self.ids = np.concatenate([np.load(folder/p['ids'], allow_pickle=False) for p in parts])
+        if len(self.keys)!=len(self.ids) or not np.array_equal(self.keys,np.sort(self.keys)) or np.any(self.keys[1:]==self.keys[:-1]):
+            raise ValueError('Índice compacto inválido.')
+
+    def __len__(self):
+        return len(self.keys)
+
+    def get(self, key, default=-1):
+        encoded=json.dumps(list(key),ensure_ascii=False,separators=(',',':')).encode('utf-8')
+        value=np.array(hashlib.sha256(encoded).digest()[:16],dtype='V16')
+        i=int(np.searchsorted(self.keys,value))
+        return int(self.ids[i]) if i<len(self.keys) and self.keys[i]==value else default
+
+
+class ShardedEmbeddings:
+    def __init__(self,folder,parts):
+        self.parts=[np.load(folder/p['file'],mmap_mode='r',allow_pickle=False) for p in parts]
+        self.starts=np.array([p['start'] for p in parts],dtype=np.int64)
+        self.rows=sum(len(p) for p in self.parts)
+        if not self.parts or self.starts[0]!=0 or any(
+            self.starts[i]!=self.starts[i-1]+len(self.parts[i-1]) for i in range(1,len(self.parts))):
+            raise ValueError('Partes de representaciones incompatibles.')
+        self.hidden=self.parts[0].shape[1]
+
+    def __len__(self):
+        return self.rows
+
+    def __getitem__(self,ids):
+        ids=np.asarray(ids,dtype=np.int64)
+        if (ids<0).any() or (ids>=self.rows).any():
+            raise IndexError('Cuenta fuera de representaciones.')
+        output=np.empty((len(ids),self.hidden),dtype=np.float32)
+        part_ids=np.searchsorted(self.starts,ids,side='right')-1
+        for i in np.unique(part_ids):
+            mask=part_ids==i
+            output[mask]=self.parts[i][ids[mask]-self.starts[i]]
+        return output
+
+
 class SnapshotScorer:
     def __init__(self, folder):
         folder = Path(folder)
-        for filename in REQUIRED_ASSETS:
+        self.meta = json.loads((folder/'context.json').read_text(encoding='utf-8-sig'))
+        sharded = self.meta.get('storage') == 'sharded_float16_v1'
+        assets = ['gnn.pt','metrics.json','edge_transform.joblib','context.json'] if sharded else REQUIRED_ASSETS
+        for filename in assets:
             if not (folder / filename).is_file():
                 raise FileNotFoundError(f'Falta outputs/gnn/{filename}')
         checkpoint = torch.load(folder/'gnn.pt', map_location='cpu', weights_only=True)
@@ -24,13 +70,16 @@ class SnapshotScorer:
         self.model.load_state_dict(checkpoint['state_dict'])
         self.model.eval()
         self.transform = joblib.load(folder/'edge_transform.joblib')
-        self.account_index = {tuple(k): i for i, k in enumerate(joblib.load(folder/'account_index.joblib'))}
-        with np.load(folder/'context.npz') as context:
-            self.embeddings = context['embeddings'].copy()
+        if sharded:
+            self.account_index = CompactAccountIndex(folder,self.meta['account_parts'])
+            self.embeddings = ShardedEmbeddings(folder,self.meta['embeddings_parts'])
+        else:
+            self.account_index = {tuple(k): i for i, k in enumerate(joblib.load(folder/'account_index.joblib'))}
+            with np.load(folder/'context.npz') as context:
+                self.embeddings = context['embeddings'].copy()
         if len(self.embeddings) != len(self.account_index):
             raise ValueError('Índice de cuentas y representaciones incompatibles.')
-        self.meta = json.loads((folder/'context.json').read_text())
-        self.threshold = float(json.loads((folder/'metrics.json').read_text())['threshold'])
+        self.threshold = float(json.loads((folder/'metrics.json').read_text(encoding='utf-8-sig'))['threshold'])
         # Cuenta sin historial: features (0,0,0,1), sin vecinos en ninguna capa.
         with torch.inference_mode():
             self.unknown = self.model.encode(torch.tensor([[0., 0., 0., 1.]]),
@@ -66,6 +115,9 @@ class SnapshotScorer:
         df['sender'] = list(zip(df['From Bank'], df.Account))
         df['receiver'] = list(zip(df['To Bank'], df['Account.1']))
         raw = features(df, include_history=False)[BASE]
+        if self.meta.get('storage') == 'sharded_float16_v1':
+            numeric = [c for c in BASE if c not in ['Receiving Currency','Payment Currency','Payment Format']]
+            raw[numeric] = raw[numeric].astype(np.float32)
         predictions, missing_counts = [], []
         for start_idx in range(0,len(df),batch_size):
             part = df.iloc[start_idx:start_idx+batch_size]

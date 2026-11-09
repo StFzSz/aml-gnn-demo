@@ -25,11 +25,16 @@ def gnn_model():
 
 @st.cache_data
 def read_json(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding='utf-8-sig'))
 
-bundle = baseline_model()
+context_path=GNN/'context.json'
+context_info=read_json(str(context_path)) if context_path.is_file() else {}
+medium_service=context_info.get('storage')=='sharded_float16_v1'
+bundle = None if medium_service else baseline_model()
 scorer = None
 assets = ['gnn.pt','metrics.json','edge_transform.joblib','context.npz','account_index.joblib','context.json']
+if medium_service:
+    assets=['gnn.pt','metrics.json','edge_transform.joblib','context.json']
 if all((GNN/name).is_file() for name in assets):
     try:
         scorer = gnn_model()
@@ -38,8 +43,11 @@ if all((GNN/name).is_file() for name in assets):
 
 with st.sidebar:
     st.subheader('Configuración')
-    model = st.selectbox('Modelo', ['GraphSAGE','Regresión logística'] if scorer else ['Regresión logística'])
-    st.caption('GraphSAGE incorpora el historial de conexiones. La regresión es la referencia tabular.')
+    options=['GraphSAGE'] if medium_service else (['GraphSAGE','Regresión logística'] if scorer else ['Regresión logística'])
+    model = st.selectbox('Modelo', options)
+    if medium_service and scorer is None:
+        st.error('Falta cargar el contexto Medium. Revisa los archivos del paquete.'); st.stop()
+    st.caption('GraphSAGE Medium usa conexiones históricas y representaciones fijas por cuenta.' if medium_service else 'GraphSAGE incorpora el historial de conexiones. La regresión es la referencia tabular.')
     official = scorer.threshold if model == 'GraphSAGE' else float(bundle['threshold'])
     explore_threshold = st.checkbox('Explorar otro umbral', value=False,
         help='Solo modifica las alertas de la demostración; las métricas oficiales permanecen iguales.')
@@ -49,7 +57,7 @@ with st.sidebar:
         st.warning('Umbral exploratorio. No modifica el modelo ni sus resultados oficiales.')
     st.caption('Un umbral menor suele producir más alertas; uno mayor, menos.')
     st.divider()
-    st.write('Los datos incluyen más de 5 millones de operaciones. La muestra web es más pequeña para facilitar la demostración.')
+    st.write('Medium contiene 31.9 millones de operaciones; el estudio principal usa los días 1–16 de septiembre. La muestra web facilita la demostración.' if medium_service else 'Los datos incluyen más de 5 millones de operaciones. La muestra web es más pequeña para facilitar la demostración.')
     if model == 'GraphSAGE':
         st.caption(f"Historial fijo al {scorer.meta['as_of']}. Solo admite consultas anteriores a {scorer.meta['valid_before']}.")
 
@@ -83,7 +91,7 @@ def show_connections(row):
         role = 'Emisor' if key == source else ('Receptor' if key == target else 'Conexión')
         if source == target == key:
             role = 'Emisor y receptor'
-        lines.append(f'{label} [label={json.dumps(label+": "+role)}];')
+        lines.append(f'{label} [label={json.dumps(label+": "+role, ensure_ascii=False)}];')
     for edge in links:
         lines.append(f"{aliases[tuple(edge['source'])]} -> {aliases[tuple(edge['target'])]};")
     lines.append(f'{aliases[source]} -> {aliases[target]} [style=dashed,color="#d97a12",label="Operación consultada",fontcolor="#d97a12"];')
@@ -169,7 +177,7 @@ if view == 'Demostración':
 
 elif view == 'Consultar una operación':
     st.subheader('Introduce una transferencia')
-    encoder = bundle['pipeline'].named_steps['preprocess'].named_transformers_['categorical']
+    encoder = scorer.transform.named_transformers_['categorical'] if medium_service else bundle['pipeline'].named_steps['preprocess'].named_transformers_['categorical']
     receiving,payment,formats = [list(v) for v in encoder.categories_]
     with st.form('query'):
         left,right = st.columns(2)
@@ -177,7 +185,7 @@ elif view == 'Consultar una operación':
             sb=st.text_input('Banco emisor','1'); sa=st.text_input('Cuenta emisora','A')
             paid=st.number_input('Importe enviado',min_value=0.,value=500.)
             pc=st.selectbox('Moneda de envío',payment)
-            day=st.date_input('Fecha',value=pd.Timestamp('2022-09-09').date())
+            day=st.date_input('Fecha',value=pd.Timestamp(scorer.meta['as_of'] if model=='GraphSAGE' else '2022-09-09').date())
         with right:
             tb=st.text_input('Banco receptor','2'); ta=st.text_input('Cuenta receptora','B')
             received=st.number_input('Importe recibido',min_value=0.,value=500.)
@@ -203,10 +211,16 @@ elif view == 'Consultar una operación':
 
 elif view == 'Comparar modelos':
     st.subheader('Resultados sobre operaciones de prueba')
-    st.write('Ambos modelos evaluaron los días 9–10 de septiembre de 2022. '
-             'Se entrenaron con los días 1–7 y eligieron su umbral en el día 8.')
+    if medium_service:
+        st.write('Medium: entrenamiento 1–12, validación 13–14 y prueba 15–16 de septiembre de 2022. '
+                 'Resultados de la política publicada: vecinos fijos por cuenta/capa y representaciones float16. '
+                 'El servicio conserva el historial al inicio del día 15; la evaluación reconstruye cada día por separado.')
+        st.caption('Reevaluación exploratoria de prueba ya observada; umbral elegido solo en validación.')
+    else:
+        st.write('Ambos modelos evaluaron los días 9–10 de septiembre de 2022. '
+                 'Se entrenaron con los días 1–7 y eligieron su umbral en el día 8.')
     comparison=[]
-    for name,folder in [('Regresión logística',BASELINE),('GraphSAGE',GNN)]:
+    for name,folder in ([('GraphSAGE Medium publicado',GNN)] if medium_service else [('Regresión logística',BASELINE),('GraphSAGE',GNN)]):
         path=folder/'metrics.json'
         if path.is_file():
             m=read_json(str(path)); t=m.get('test')
@@ -222,8 +236,18 @@ elif view == 'Comparar modelos':
     if len(frame):
         metric=st.selectbox('Comparar visualmente',['Detección (recall)','Precisión de alertas','Average precision','F1'])
         st.bar_chart(frame.set_index('Modelo')[[metric]])
-    st.info('Menos falsas alertas puede significar que también se detectan menos casos. '
-            'La GNN inicial no supera a la referencia en todas las métricas.')
+    st.info('Las alertas requieren revisión humana. Compara precisión, detección y carga de trabajo; una puntuación no es una probabilidad calibrada de fraude.')
+    previous=GNN/'sampled_comparison.json'
+    if medium_service and previous.is_file():
+        with st.expander('Comparación anterior Small / Medium con muestreo por lote'):
+            history=read_json(str(previous)); comparison_rows=[]
+            for name,entry in history['models'].items():
+                test=entry['test']; tn,fp,fn,tp=test['confusion_matrix_tn_fp_fn_tp']
+                comparison_rows.append({'Modelo':name,'AP':test['average_precision'],'Precisión':test['precision'],
+                    'Recall':test['recall'],'Detectadas':tp,'Falsas alertas':fp})
+            st.dataframe(pd.DataFrame(comparison_rows),hide_index=True,width='stretch')
+            st.caption('Mismas operaciones de prueba, con vecinos muestreados por lote. '
+                       'Esta comparación corresponde al experimento anterior y no a las representaciones fijas publicadas.')
     with st.expander('Entender las métricas',expanded=True):
         st.write('**Precisión de alertas:** de las operaciones marcadas, qué porcentaje tiene etiqueta positiva. '
                  '**Detección (recall):** de todos los positivos del test, qué porcentaje encontró el modelo. '
@@ -232,6 +256,8 @@ elif view == 'Comparar modelos':
     log=GNN/'training_log.json'
     if log.is_file():
         with st.expander('Ver evolución del entrenamiento'):
+            if medium_service:
+                st.caption('AP de entrenamiento con muestreo por lote; difiere de la política fija de exportación.')
             st.line_chart(pd.DataFrame(read_json(str(log))).set_index('epoch')[['validation_average_precision']])
     st.caption('Los umbrales exploratorios de la barra lateral no modifican estos resultados oficiales.')
 
@@ -263,12 +289,18 @@ elif view == 'Procesar un CSV':
     if demo.is_file():
         example=pd.DataFrame(read_json(str(demo))[:10]).drop(columns=['Is Laundering'],errors='ignore')
         st.download_button('Descargar ejemplo de entrada',example.to_csv(index=False).encode(),'ejemplo_transferencias.csv','text/csv')
-    with st.expander('Procesar toda la base en tu computadora'):
-        st.write('score_dataset.py recorre la ventana de datos y reconstruye un snapshot por día. '
-                 'La opción test evalúa los días de prueba; all incluye también entrenamiento y validación '
-                 'y los identifica por separado. Los datos posteriores a la ventana principal quedan excluidos y se cuentan.')
-        st.code('.\\.venv\\Scripts\\python.exe score_dataset.py --csv .\\data\\raw\\HI-Small_Trans.csv --scope test --device cuda',language='powershell')
-        st.caption('El CSV completo no se sube a Streamlit. Los pesos quedan congelados; este paso no reentrena.')
+    if medium_service:
+        with st.expander('Evaluación local del archivo completo'):
+            st.write('El entrenamiento y la exportación procesan Medium localmente por bloques. '
+                     'El exportador reconstruye el historial de cada día de validación y prueba para medir '
+                     'la política publicada. El servidor web solo admite el día del snapshot indicado arriba.')
+    else:
+        with st.expander('Procesar toda la base en tu computadora'):
+            st.write('score_dataset.py recorre la ventana de datos y reconstruye un snapshot por día. '
+                     'La opción test evalúa los días de prueba; all incluye también entrenamiento y validación '
+                     'y los identifica por separado. Los datos posteriores a la ventana principal quedan excluidos y se cuentan.')
+            st.code('.\\.venv\\Scripts\\python.exe score_dataset.py --csv .\\data\\raw\\HI-Small_Trans.csv --scope test --device cuda',language='powershell')
+            st.caption('El CSV completo no se sube a Streamlit. Los pesos quedan congelados; este paso no reentrena.')
     summary=st.file_uploader('Ver resumen JSON de un procesamiento local',type=['json'],key='summary_upload')
     if summary is not None:
         try:
