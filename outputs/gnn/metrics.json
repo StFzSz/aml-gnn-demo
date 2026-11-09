@@ -1,53 +1,83 @@
 {
-  "model": "GraphSAGE_edge_classifier",
+  "model": "GraphSAGE_medium_fixed_embeddings",
   "best_epoch": 40,
-  "seed": 42,
-  "hidden": 32,
-  "history_days": 2,
-  "threshold": 0.9525631070137024,
-  "train_end": "2022-09-08",
-  "validation_end": "2022-09-09",
-  "data_start": "2022-09-01 00:00:00",
-  "data_end": "2022-09-10 23:59:00",
-  "train_rows": 3731672,
-  "train_positives": 3027,
+  "threshold": 0.9911442399024963,
   "validation": {
-    "average_precision": 0.057920909862726994,
-    "precision": 0.10103244837758112,
-    "recall": 0.2541743970315399,
-    "f1": 0.1445910290237467,
+    "average_precision": 0.2028692580429982,
+    "precision": 0.2910503885685635,
+    "recall": 0.255839576906126,
+    "f1": 0.27231148117743637,
     "confusion_matrix_tn_fp_fn_tp": [
-      481015,
-      1219,
-      402,
-      137
+      3852217,
+      2828,
+      3377,
+      1161
     ],
-    "positive_rate": 0.0011164667084813118,
-    "rows": 482773
+    "positive_rate": 0.0011757746886127335,
+    "rows": 3859583
   },
   "test": {
-    "average_precision": 0.029157908252725236,
-    "precision": 0.042357993363263714,
-    "recall": 0.22698744769874477,
-    "f1": 0.07139332126994571,
+    "average_precision": 0.040977357385015616,
+    "precision": 0.0577503015681544,
+    "recall": 0.2460912400942386,
+    "f1": 0.09354773051088948,
     "confusion_matrix_tn_fp_fn_tp": [
-      856930,
-      4906,
-      739,
-      217
+      4928869,
+      18747,
+      3520,
+      1149
     ],
-    "positive_rate": 0.0011080306725143488,
-    "rows": 862792
+    "positive_rate": 0.0009427971128479076,
+    "rows": 4952285
   },
   "test_evaluated": true,
+  "history_days": 2,
+  "fanout": 10,
+  "batch_size": 512,
+  "seed": 42,
+  "negatives_per_day_cap": 10000,
+  "train_end": "2022-09-13",
+  "validation_end": "2022-09-15",
+  "before": "2022-09-17",
+  "source_sha256": "3126afb8155e7c8815d62bc5370549a7b5ae6bf7dfe872b3cd7813e66a3d7ff5",
+  "evaluation_context": "Política del servicio: vecinos fijos por nodo/capa, embeddings float16, historial causal diario.",
+  "note": "Reevaluación exploratoria del mismo test ya observado. No reentrena pesos; umbral recalculado en validación. Las métricas originales de muestreo por lote se conservan por separado.",
+  "elapsed_seconds": 1906.674640399986,
   "epochs_completed": 40,
-  "optimizer_updates": 280,
-  "early_stopping_patience": 8,
-  "initial_learning_rate": 0.001,
-  "elapsed_seconds": 26.40201970000635,
-  "device": "cuda",
-  "negatives_per_day_cap": 50000,
-  "training_objective": "equal_class_weight_and_equal_day_weight",
+  "validation_days": [
+    "2022-09-13",
+    "2022-09-14"
+  ],
+  "test_days": [
+    "2022-09-15",
+    "2022-09-16"
+  ],
+  "ranking_at_equal_alert_budgets": [
+    {
+      "alert_budget": 1000,
+      "detected": 82,
+      "false_alerts": 918,
+      "precision": 0.082,
+      "recall": 0.01756264724780467,
+      "note": "Diagnóstico de ranking top-k en todo el periodo; no es un umbral operativo elegido en test."
+    },
+    {
+      "alert_budget": 5000,
+      "detected": 379,
+      "false_alerts": 4621,
+      "precision": 0.0758,
+      "recall": 0.08117369886485329,
+      "note": "Diagnóstico de ranking top-k en todo el periodo; no es un umbral operativo elegido en test."
+    },
+    {
+      "alert_budget": 10000,
+      "detected": 684,
+      "false_alerts": 9316,
+      "precision": 0.0684,
+      "recall": 0.14649817948168772,
+      "note": "Diagnóstico de ranking top-k en todo el periodo; no es un umbral operativo elegido en test."
+    }
+  ],
   "versions": {
     "torch": "2.10.0+cu128",
     "torch_geometric": "2.8.1",
@@ -55,6 +85,7 @@
     "pandas": "2.2.3",
     "scikit-learn": "1.8.0"
   },
-  "input_sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040",
-  "test_evaluation_note": "Comparación exploratoria: conjunto de prueba observado previamente."
+  "data_start": "2022-09-01 00:00:00",
+  "data_end": "2022-09-16 23:59:00",
+  "export_seconds": 114.81938539998373
 }

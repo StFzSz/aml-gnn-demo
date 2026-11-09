@@ -1,0 +1,133 @@
+{
+  "schema": "medium_common_comparison_v1",
+  "test_days": [
+    "2022-09-15",
+    "2022-09-16"
+  ],
+  "validation_days": [
+    "2022-09-13",
+    "2022-09-14"
+  ],
+  "source_sha256": "3126afb8155e7c8815d62bc5370549a7b5ae6bf7dfe872b3cd7813e66a3d7ff5",
+  "history_days": 2,
+  "fanout": 10,
+  "batch_size": 512,
+  "seed": 42,
+  "models": {
+    "Small": {
+      "threshold_selected_on_common_validation": 0.9364798069000244,
+      "validation": {
+        "average_precision": 0.03503941891155301,
+        "precision": 0.0653307713423003,
+        "recall": 0.20978404583516969,
+        "f1": 0.09963369963369964,
+        "confusion_matrix_tn_fp_fn_tp": [
+          3841425,
+          13620,
+          3586,
+          952
+        ],
+        "positive_rate": 0.0011757746886127335,
+        "rows": 3859583
+      },
+      "test": {
+        "average_precision": 0.016792714034885525,
+        "precision": 0.027602523659305992,
+        "recall": 0.24737631184407796,
+        "f1": 0.04966353492571969,
+        "confusion_matrix_tn_fp_fn_tp": [
+          4906927,
+          40689,
+          3514,
+          1155
+        ],
+        "positive_rate": 0.0009427971128479076,
+        "rows": 4952285
+      },
+      "ranking_at_equal_alert_budgets": [
+        {
+          "alert_budget": 1000,
+          "detected": 11,
+          "false_alerts": 989,
+          "precision": 0.011,
+          "recall": 0.0023559648747055045,
+          "note": "Diagnóstico de ranking top-k en todo el periodo; no es un umbral operativo elegido en test."
+        },
+        {
+          "alert_budget": 5000,
+          "detected": 112,
+          "false_alerts": 4888,
+          "precision": 0.0224,
+          "recall": 0.0239880059970015,
+          "note": "Diagnóstico de ranking top-k en todo el periodo; no es un umbral operativo elegido en test."
+        },
+        {
+          "alert_budget": 10000,
+          "detected": 261,
+          "false_alerts": 9739,
+          "precision": 0.0261,
+          "recall": 0.055900621118012424,
+          "note": "Diagnóstico de ranking top-k en todo el periodo; no es un umbral operativo elegido en test."
+        }
+      ]
+    },
+    "Medium": {
+      "threshold_selected_on_common_validation": 0.9910954236984253,
+      "validation": {
+        "average_precision": 0.20166363499035117,
+        "precision": 0.2898120672601385,
+        "recall": 0.25826355222565006,
+        "f1": 0.2731298065718947,
+        "confusion_matrix_tn_fp_fn_tp": [
+          3852173,
+          2872,
+          3366,
+          1172
+        ],
+        "positive_rate": 0.0011757746886127335,
+        "rows": 3859583
+      },
+      "test": {
+        "average_precision": 0.04109648895174824,
+        "precision": 0.05775775775775776,
+        "recall": 0.24716213321910474,
+        "f1": 0.09363463020812203,
+        "confusion_matrix_tn_fp_fn_tp": [
+          4928790,
+          18826,
+          3515,
+          1154
+        ],
+        "positive_rate": 0.0009427971128479076,
+        "rows": 4952285
+      },
+      "ranking_at_equal_alert_budgets": [
+        {
+          "alert_budget": 1000,
+          "detected": 80,
+          "false_alerts": 920,
+          "precision": 0.08,
+          "recall": 0.017134289997858213,
+          "note": "Diagnóstico de ranking top-k en todo el periodo; no es un umbral operativo elegido en test."
+        },
+        {
+          "alert_budget": 5000,
+          "detected": 387,
+          "false_alerts": 4613,
+          "precision": 0.0774,
+          "recall": 0.08288712786463912,
+          "note": "Diagnóstico de ranking top-k en todo el periodo; no es un umbral operativo elegido en test."
+        },
+        {
+          "alert_budget": 10000,
+          "detected": 679,
+          "false_alerts": 9321,
+          "precision": 0.0679,
+          "recall": 0.1454272863568216,
+          "note": "Diagnóstico de ranking top-k en todo el periodo; no es un umbral operativo elegido en test."
+        }
+      ]
+    }
+  },
+  "note": "Comparación exploratoria de sistemas: cambian los datos, actualizaciones y muestreo de entrenamiento. Small se evalúa con contexto Medium y umbral reajustado en validación común; no es el servicio Small original."
+}

@@ -1,0 +1,46 @@
+{
+  "status": "passed",
+  "output": "outputs\\gnn_medium_cloud",
+  "demo_rows": 3000,
+  "demo_alerts": 3,
+  "inference_parity_max_abs_diff": 0.0,
+  "demo_cpu_batch_ms": 50.66000000806525,
+  "package_MB": 170.01,
+  "largest_files": [
+    {
+      "name": "accounts_keys_000.npy",
+      "MB": 15.26
+    },
+    {
+      "name": "accounts_keys_001.npy",
+      "MB": 15.26
+    },
+    {
+      "name": "embeddings_000.npy",
+      "MB": 6.1
+    },
+    {
+      "name": "embeddings_001.npy",
+      "MB": 6.1
+    },
+    {
+      "name": "embeddings_002.npy",
+      "MB": 6.1
+    }
+  ],
+  "export_test": {
+    "average_precision": 0.040977357385015616,
+    "precision": 0.0577503015681544,
+    "recall": 0.2460912400942386,
+    "f1": 0.09354773051088948,
+    "confusion_matrix_tn_fp_fn_tp": [
+      4928869,
+      18747,
+      3520,
+      1149
+    ],
+    "positive_rate": 0.0009427971128479076,
+    "rows": 4952285
+  },
+  "note": "Memoria real y latencia del servidor cloud todavía por medir."
+}
