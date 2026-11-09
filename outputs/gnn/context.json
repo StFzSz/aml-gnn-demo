@@ -1,6 +1,133 @@
 {
-  "as_of": "2022-09-09 00:00:00",
-  "valid_before": "2022-09-10 00:00:00",
+  "as_of": "2022-09-15 00:00:00",
+  "valid_before": "2022-09-16 00:00:00",
   "history_days": 2,
-  "note": "Snapshot fijo al inicio del primer d\u00eda de test; no actualiza historial durante el d\u00eda."
+  "storage": "sharded_float16_v1",
+  "nodes": 2076983,
+  "hidden": 32,
+  "embeddings_parts": [
+    {
+      "file": "embeddings_000.npy",
+      "start": 0,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_001.npy",
+      "start": 100000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_002.npy",
+      "start": 200000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_003.npy",
+      "start": 300000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_004.npy",
+      "start": 400000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_005.npy",
+      "start": 500000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_006.npy",
+      "start": 600000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_007.npy",
+      "start": 700000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_008.npy",
+      "start": 800000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_009.npy",
+      "start": 900000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_010.npy",
+      "start": 1000000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_011.npy",
+      "start": 1100000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_012.npy",
+      "start": 1200000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_013.npy",
+      "start": 1300000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_014.npy",
+      "start": 1400000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_015.npy",
+      "start": 1500000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_016.npy",
+      "start": 1600000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_017.npy",
+      "start": 1700000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_018.npy",
+      "start": 1800000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_019.npy",
+      "start": 1900000,
+      "rows": 100000
+    },
+    {
+      "file": "embeddings_020.npy",
+      "start": 2000000,
+      "rows": 76983
+    }
+  ],
+  "account_parts": [
+    {
+      "keys": "accounts_keys_000.npy",
+      "ids": "accounts_ids_000.npy"
+    },
+    {
+      "keys": "accounts_keys_001.npy",
+      "ids": "accounts_ids_001.npy"
+    },
+    {
+      "keys": "accounts_keys_002.npy",
+      "ids": "accounts_ids_002.npy"
+    }
+  ],
+  "sampling": "fixed_per_node_per_layer_with_replacement_above_fanout",
+  "fanout": 10,
+  "seed": 42,
+  "note": "Snapshot fijo; representaciones float16 convertidas a float32 al puntuar. No actualiza conexiones durante el día."
 }

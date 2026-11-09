@@ -1,9 +1,9 @@
 {
   "seed": 42,
   "rows": 3000,
-  "population_rows": 654467,
+  "population_rows": 1930419,
   "selection": "uniform_random_without_labels",
-  "context_as_of": "2022-09-09 00:00:00",
-  "graph_edges_visual_subset": 12730,
-  "note": "Muestra ilustrativa; las m\u00e9tricas globales proceden del test completo. Grafo visual parcial."
+  "context_as_of": "2022-09-15",
+  "graph_edges_visual_subset": 20000,
+  "note": "Vista parcial; no es explicación causal del score. Muestra sin selección por etiqueta."
 }
