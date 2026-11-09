@@ -1,10 +1,10 @@
 {
   "model": "GraphSAGE_edge_classifier",
-  "best_epoch": 8,
+  "best_epoch": 40,
   "seed": 42,
   "hidden": 32,
   "history_days": 2,
-  "threshold": 0.7208219170570374,
+  "threshold": 0.9525631070137024,
   "train_end": "2022-09-08",
   "validation_end": "2022-09-09",
   "data_start": "2022-09-01 00:00:00",
@@ -12,34 +12,39 @@
   "train_rows": 3731672,
   "train_positives": 3027,
   "validation": {
-    "average_precision": 0.024758040614258115,
-    "precision": 0.05351437699680511,
-    "recall": 0.12430426716141002,
-    "f1": 0.07481853713009493,
+    "average_precision": 0.057920909862726994,
+    "precision": 0.10103244837758112,
+    "recall": 0.2541743970315399,
+    "f1": 0.1445910290237467,
     "confusion_matrix_tn_fp_fn_tp": [
-      481049,
-      1185,
-      472,
-      67
+      481015,
+      1219,
+      402,
+      137
     ],
     "positive_rate": 0.0011164667084813118,
     "rows": 482773
   },
   "test": {
-    "average_precision": 0.013041380603907065,
-    "precision": 0.028724894908921064,
-    "recall": 0.12866108786610878,
-    "f1": 0.046964490263459335,
+    "average_precision": 0.029157908252725236,
+    "precision": 0.042357993363263714,
+    "recall": 0.22698744769874477,
+    "f1": 0.07139332126994571,
     "confusion_matrix_tn_fp_fn_tp": [
-      857677,
-      4159,
-      833,
-      123
+      856930,
+      4906,
+      739,
+      217
     ],
-    "positive_rate": 0.001108030672185123,
+    "positive_rate": 0.0011080306725143488,
     "rows": 862792
   },
-  "elapsed_seconds": 18.56435610000335,
+  "test_evaluated": true,
+  "epochs_completed": 40,
+  "optimizer_updates": 280,
+  "early_stopping_patience": 8,
+  "initial_learning_rate": 0.001,
+  "elapsed_seconds": 26.40201970000635,
   "device": "cuda",
   "negatives_per_day_cap": 50000,
   "training_objective": "equal_class_weight_and_equal_day_weight",
@@ -50,5 +55,6 @@
     "pandas": "2.2.3",
     "scikit-learn": "1.8.0"
   },
-  "input_sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040"
+  "input_sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040",
+  "test_evaluation_note": "Comparación exploratoria: conjunto de prueba observado previamente."
 }

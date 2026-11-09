@@ -36,36 +36,64 @@ class SnapshotScorer:
             self.unknown = self.model.encode(torch.tensor([[0., 0., 0., 1.]]),
                                              torch.empty((2, 0), dtype=torch.long))[0].numpy()
 
-    def score(self, transaction):
+    def score_batch(self, transactions, batch_size=4096):
+        """Puntuar un lote del periodo del snapshot; no usa etiquetas."""
         start = time.perf_counter()
-        row = dict(transaction)
-        for key in ['From Bank', 'To Bank', 'Account', 'Account.1', 'Payment Currency',
-                    'Receiving Currency', 'Payment Format', 'Timestamp']:
-            if not isinstance(row.get(key), str) or not row[key].strip():
-                raise ValueError(f'Campo inválido: {key}')
+        df = pd.DataFrame(transactions).copy().reset_index(drop=True)
+        required = ['From Bank', 'To Bank', 'Account', 'Account.1', 'Payment Currency',
+                    'Receiving Currency', 'Payment Format', 'Timestamp', 'Amount Paid', 'Amount Received']
+        if df.empty:
+            raise ValueError('El lote está vacío.')
+        if set(required)-set(df.columns):
+            raise ValueError(f'Columnas faltantes: {sorted(set(required)-set(df.columns))}')
+        if df[required].isna().any().any():
+            raise ValueError('Hay valores faltantes en el lote.')
+        for key in required[:8]:
+            if not df[key].map(lambda v: isinstance(v, str) and bool(v.strip())).all():
+                raise ValueError(f'Campo inválido: {key}. Conservar identificadores como texto.')
         for key in ['Amount Paid', 'Amount Received']:
-            row[key] = float(row[key])
-            if not np.isfinite(row[key]) or row[key] < 0:
+            df[key] = pd.to_numeric(df[key], errors='raise')
+            if not np.isfinite(df[key]).all() or (df[key]<0).any():
                 raise ValueError(f'Importe inválido: {key}')
-        row['time'] = pd.Timestamp(row['Timestamp'])
-        if row['time'].tzinfo is not None:
-            raise ValueError('Usar la hora del dataset sin zona horaria.')
-        if not pd.Timestamp(self.meta['as_of']) <= row['time'] < pd.Timestamp(self.meta['valid_before']):
-            raise ValueError(f"Snapshot válido desde {self.meta['as_of']} hasta {self.meta['valid_before']} (exclusivo).")
-        row['sender'] = (row['From Bank'], row['Account'])
-        row['receiver'] = (row['To Bank'], row['Account.1'])
-        raw = features(pd.DataFrame([row]), include_history=False)[BASE]
-        attrs = torch.as_tensor(self.transform.transform(raw).astype(np.float32))
-        vectors = []
-        missing = 0
-        for key in [row['sender'], row['receiver']]:
-            idx = self.account_index.get(key)
-            vectors.append(self.unknown if idx is None else self.embeddings[idx])
-            missing += int(idx is None)
-        z = torch.from_numpy(np.stack(vectors))
-        with torch.inference_mode():
-            score = torch.sigmoid(self.model.score(z, torch.tensor([[0], [1]]), attrs)).item()
-        return {'model': 'GraphSAGE_edge_classifier', 'score': score,
-                'threshold': self.threshold, 'alert': score >= self.threshold,
-                'latency_ms': (time.perf_counter() - start) * 1000,
-                'accounts_outside_index': missing, 'context_as_of': self.meta['as_of']}
+        df['time'] = pd.to_datetime(df.Timestamp, format='mixed', errors='raise')
+        if df.time.isna().any() or df.time.dt.tz is not None:
+            raise ValueError('Fechas inválidas o con zona horaria; usar la hora del dataset.')
+        valid = ((df.time >= pd.Timestamp(self.meta['as_of'])) &
+                 (df.time < pd.Timestamp(self.meta['valid_before'])))
+        if not valid.all():
+            raise ValueError(f"{int((~valid).sum())} eventos fuera del snapshot: "
+                             f"{self.meta['as_of']} a {self.meta['valid_before']} (exclusivo).")
+        df['sender'] = list(zip(df['From Bank'], df.Account))
+        df['receiver'] = list(zip(df['To Bank'], df['Account.1']))
+        raw = features(df, include_history=False)[BASE]
+        predictions, missing_counts = [], []
+        for start_idx in range(0,len(df),batch_size):
+            part = df.iloc[start_idx:start_idx+batch_size]
+            attrs = torch.as_tensor(self.transform.transform(raw.iloc[start_idx:start_idx+batch_size]).astype(np.float32))
+            vectors, misses = [], np.zeros(len(part),dtype=np.int32)
+            for column in ['sender', 'receiver']:
+                ids = np.array([self.account_index.get(k,-1) for k in part[column]],dtype=np.int64)
+                unknown = ids < 0
+                z = self.embeddings[np.maximum(ids,0)].copy()
+                z[unknown] = self.unknown
+                vectors.append(torch.from_numpy(z))
+                misses += unknown
+            with torch.inference_mode():
+                logits = self.model.head(torch.cat([vectors[0],vectors[1],attrs],dim=1)).flatten()
+                predictions.append(torch.sigmoid(logits).numpy())
+            missing_counts.append(misses)
+        scores = np.concatenate(predictions)
+        result = pd.DataFrame({'score': scores, 'alert': scores >= self.threshold,
+                               'accounts_outside_index': np.concatenate(missing_counts)})
+        result.attrs['elapsed_ms'] = (time.perf_counter()-start)*1000
+        result.attrs['rows'] = len(result)
+        return result
+
+    def score(self, transaction):
+        batch = self.score_batch([transaction])
+        row = batch.iloc[0]
+        return {'model': 'GraphSAGE_edge_classifier', 'score': float(row.score),
+                'threshold': self.threshold, 'alert': bool(row.alert),
+                'latency_ms': batch.attrs['elapsed_ms'],
+                'accounts_outside_index': int(row.accounts_outside_index),
+                'context_as_of': self.meta['as_of']}
